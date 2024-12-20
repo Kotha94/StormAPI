@@ -1,0 +1,4 @@
+websocket-client
+pymongo
+requests
+python-dotenv
