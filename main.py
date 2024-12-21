@@ -5,7 +5,8 @@ from threading import Thread
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 import websocket
-from flask import Flask, jsonify
+import requests
+import xml.etree.ElementTree as Tree
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -15,8 +16,6 @@ load_dotenv()
 GAME_USERNAME = os.getenv("GAME_USERNAME")
 GAME_PASSWORD = os.getenv("GAME_PASSWORD")
 MONGO_URI = os.getenv("MONGO_URI")
-
-app = Flask(__name__)
 
 class MySocket(websocket.WebSocketApp):
     def __init__(self, url, serveur_header, royaume, nom, mdp, intervalle):
@@ -144,20 +143,15 @@ class MySocket(websocket.WebSocketApp):
     def on_close(self, ws, close_status_code, close_msg):
         print("### Socket disconnected ###")
 
-@app.route('/start_scan', methods=['GET'])
-def start_scan():
-    # Démarrer le scan dans un thread séparé
+def main():
     SERVER = "International 2"
     ROYAUME = 4
     SCAN_INTERVAL = 5
     URL = "wss://ep-live-mz-int2-es1-it1-game.goodgamestudios.com"
     SERVEUR_HEADER = "EmpireEx_7"
-    
-    # Créer et démarrer l'application WebSocket
+    # Create a websocket application
     ws_app = MySocket(URL, SERVEUR_HEADER, ROYAUME, GAME_USERNAME, GAME_PASSWORD, SCAN_INTERVAL)
-    Thread(target=ws_app.run_forever, daemon=True).start()
-    
-    return jsonify({"message": "Scan started!"})
+    ws_app.run_forever()
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    main()
