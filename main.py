@@ -5,8 +5,7 @@ from threading import Thread
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 import websocket
-import requests
-import xml.etree.ElementTree as Tree
+from flask import Flask, jsonify
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -16,6 +15,8 @@ load_dotenv()
 GAME_USERNAME = os.getenv("GAME_USERNAME")
 GAME_PASSWORD = os.getenv("GAME_PASSWORD")
 MONGO_URI = os.getenv("MONGO_URI")
+
+app = Flask(__name__)
 
 class MySocket(websocket.WebSocketApp):
     def __init__(self, url, serveur_header, royaume, nom, mdp, intervalle):
@@ -128,7 +129,6 @@ class MySocket(websocket.WebSocketApp):
                         elif castle[5] == 13:
                             self.fortos.append([castle[1], castle[2], 70, 1, 10 - castle[-2]])
             if data["AI"][0][2] // 13 == 98:
-                print(f"Scan de la carte en cours : {data['AI'][0][1] // 13 + 1}%")
                 if data["AI"][0][1] // 13 == 98:
                     self.finish_scan_map()
             if (data["AI"][0][2] // 13) % 10 == 0 and (data["AI"][0][1] // 13 != 98 or data["AI"][0][2] // 13 != 90):
@@ -144,15 +144,20 @@ class MySocket(websocket.WebSocketApp):
     def on_close(self, ws, close_status_code, close_msg):
         print("### Socket disconnected ###")
 
-def main():
+@app.route('/start_scan', methods=['GET'])
+def start_scan():
+    # Démarrer le scan dans un thread séparé
     SERVER = "International 2"
     ROYAUME = 4
-    SCAN_INTERVAL = 2
+    SCAN_INTERVAL = 5
     URL = "wss://ep-live-mz-int2-es1-it1-game.goodgamestudios.com"
     SERVEUR_HEADER = "EmpireEx_7"
-    # Create a websocket application
+    
+    # Créer et démarrer l'application WebSocket
     ws_app = MySocket(URL, SERVEUR_HEADER, ROYAUME, GAME_USERNAME, GAME_PASSWORD, SCAN_INTERVAL)
-    ws_app.run_forever()
+    Thread(target=ws_app.run_forever, daemon=True).start()
+    
+    return jsonify({"message": "Scan started!"})
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True, host="0.0.0.0", port=5000)
